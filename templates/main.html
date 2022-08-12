@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block headextra %}
+
+
+<script>
+    if ( window.history.replaceState ) {
+        window.history.replaceState( null, null, window.location.href );
+    }
+</script>
+
+
+{% endblock %}
+
+
+{% block body %}
+yepp
+
+
+    <div class="container">
+        <canvas id="output"></canvas>
+        <video hidden autoplay></video>
+    </div>
+
+
+{% endblock %}

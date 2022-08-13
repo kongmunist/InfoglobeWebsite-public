@@ -1,3 +1,6 @@
 .idea/*
 .DS_Store
 *.pyc
+static/messages.json
+static/messages.txt
+static/log.txt

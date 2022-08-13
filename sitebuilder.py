@@ -49,8 +49,9 @@ def save_msg():
         with open('static/log.txt', "a") as f:
             f.write(dt_string + ": " + request.get_json() + "\n")
 
-
     return jsonify(data)
+
+
 
 @app.route('/', methods = ['GET'])
 def index():
@@ -67,10 +68,14 @@ def index():
 # Doesn't work, also don't need it
 @app.route('/json')
 def jsonFile():
-    return redirect(url_for('static', filename='messages.json'))
-    # return """{"msg0": "whoaffls", "msg1": "awopdk", "msg2": "what"}"""
-    # return "<a href=%s>file</a>" % "url_for('static', filename='messages.json')"
+    # d['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open('static/messages.json', "r+") as f:
+        d = json.loads(f.read())
+        d.update({"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+        f.seek(0)
+        f.write(json.dumps(d))
 
+    return redirect(url_for('static', filename='messages.json'))
 
 @app.after_request
 def add_header(response):
@@ -85,12 +90,4 @@ def add_header(response):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "build":
-        # Builds the website into a static site and runs "firebase deploy" to update the site
-        if len(sys.argv) > 2 and sys.argv[2] == "local":
-            app.config["FREEZER_DESTINATION"] = "/fbdir/public"
-            # freezer.freeze()
-        # else:
-            # freezer.freeze()
-    else:
-        app.run(port=8000, debug=True)
+    app.run(port=8000, debug=True)

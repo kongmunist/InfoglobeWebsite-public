@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify
 # from flask_frozen import Freezer
 import os, sys
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -20,14 +21,14 @@ def save_msg():
     data = []
     if request.method == 'POST':
         try:
-            with open('messages.txt', 'r') as f:
+            with open('static/messages.txt', 'r') as f:
                 data = f.read().strip().split('\n')
         except:
             pass
 
-        with open('messages.txt', 'w') as f:
+        with open('static/messages.txt', 'w') as f:
             msg = request.get_json()
-            msg = msg[:MAX_LENGTH] if len(msg) > MAX_LENGTH else msg
+            msg = msg[:MAX_LENGTH]
             data.insert(0, msg)
 
             data = data[:3]
@@ -36,8 +37,18 @@ def save_msg():
         with open('static/messages.json', "w+") as f:
             d = dict()
             for i,msg in enumerate(data):
-                d["msg" + str(i)] = msg;
+                d["msg" + str(i)] = msg
             f.write(json.dumps(d))
+
+
+        # Add to permanent log:
+        # datetime object containing current date and time + message
+        now = datetime.now()
+        # dd/mm/YY H:M:S
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        with open('static/log.txt', "a") as f:
+            f.write(dt_string + ": " + request.get_json() + "\n")
+
 
     return jsonify(data)
 
@@ -46,7 +57,7 @@ def index():
     data = []
     if (request.method == "GET"):
         try:
-            with open('messages.txt', 'r') as f:
+            with open('static/messages.txt', 'r') as f:
                 data = f.read().strip().split('\n')
         except:
             pass

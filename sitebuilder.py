@@ -64,12 +64,6 @@ def index():
     return render_template("form.html", values=data)
 
 
-# Doesn't work, also don't need it
-@app.route('/json')
-def jsonFile():
-    return "<a href=%s>file</a>" % "url_for('static', filename='messages.json')"
-
-
 @app.after_request
 def add_header(response):
     """

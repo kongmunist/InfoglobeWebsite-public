@@ -1,0 +1,443 @@
+// Current iteration started 8/8
+/* retrieves time and date and messages on timer, alternating between the two. Always scrolls, transition random.
+ *  Rounds of len 4, showing messages then date or time.
+ */
+
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
+#include <Arduino.h>
+
+#include <TimeLib.h>
+
+// Define macros for input and output pin etc.
+#include "PinDefinitionsAndMore.h"
+
+//#define SEND_PWM_BY_TIMER
+//#define USE_NO_SEND_PWM
+//#include <IRremote.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+
+
+//13.48 ms/13 sigs, .48ms overgo on 13 is a reduction to like 37 uS, or instead of 1000 we use 963
+// For this ESP, 18ms is actually 18.24ms, so the delay should be 986.8 ms.
+ // SIKE, that did't work. 1000 works better
+
+#define numSignals 1
+
+//int gapTime = 987;
+int zeroTime = 988;
+int oneTime = 1000;
+uint16_t IRSIGS[numSignals][2] = {
+//    {987,0}
+//    {gapTime,0}
+    {zeroTime,0}
+    
+};
+
+int curSig = 0;
+
+//  BOOYAH
+bool sig[320] = {0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,1,0,0,1,1,1,1,0,1,0,0,1,1,1,1,0,1,0,1,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1,0,1,1,0,0,1};
+bool sig2[320] = {0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,1,0,0,1,1,1,1,0,1,0,0,1,1,1,1,0,1,0,1,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1,0,1,1,0,0,1};
+long msgLen = 96;
+//bool sig[0];
+
+
+// For a flashing display
+//The code 05h is used to flash a stationary display. The message starts with 05h, followed by the message text.
+// The next byte (00d to 34d) is the position of the beginning of the flashing portion of the display. The next byte
+// (00d to 35d) is the position of the end of the flashing portion of the display. The last byte (00d to 35d) 
+//is the message length, used for auto-centering.
+
+
+const uint16_t kIrLed = 4;  // ESP8266 GPIO pin to use. Recommended: 4 (D2).
+IRsend irsend(kIrLed);  // Set the GPIO to be used to sending the message.
+
+
+long lastDatetimeUpdate = 0;
+long lastDisplayUpdate = 0;
+
+long datetimeWait = 60000;
+long displayWait = 31000;
+bool written = false;
+
+char infoglobeMsg[38];
+long locTime;
+//bool showTime;
+int showIndex;
+int showMax;
+bool showDate;
+
+const int numMsgs = 5;
+int curMsgIndex = 0;
+String msgs[numMsgs] = {
+    "8v)",
+    "Gamma",
+    ":D",
+    "Yee",
+    ":3"
+};
+
+int effects[] = {0,2,  3,4,7,8,  9,10,11,  12,  16,17,18,19,  21, 24, 25, 26,28,  30,33, 34};
+int numEffects = 21;
+
+
+void setup() {
+    pinMode(LED_BUILTIN, OUTPUT);
+    Serial.begin(115200);
+
+    irsend.begin();
+
+    Serial.print(F("Ready to send IR signals at pin "));
+    Serial.println(kIrLed);
+
+    locTime = getLocalTime(); // get initial time
+    unix2time(locTime);
+    
+    lastDatetimeUpdate = millis();
+    lastDisplayUpdate = millis();
+//    showTime = false;
+    showMax = 4;
+    showIndex = 2;
+    showDate = true;
+
+        
+    
+} 
+
+
+void loop() {
+    // Manually adding a new message
+    if (Serial.available() > 0){
+        // Read in new message
+        String newSigS = Serial.readString();
+        //////// Read in string from Serial to write onto the infoglobe
+        infoAddMsg(newSigS);
+        Serial.print("New message: ");
+        Serial.println(newSigS);
+        written = false;
+    }
+
+
+
+    //// Retrieve time and date every datetimeWait milliseconds
+    if (millis()-lastDatetimeUpdate > datetimeWait){
+        locTime = getLocalTime();
+        if (locTime > 0){
+            unix2time(locTime);
+        } 
+        
+        lastDatetimeUpdate = millis();
+        lastDisplayUpdate = millis();
+        written = false;
+    } else if (millis() - lastDisplayUpdate > displayWait){
+        // Every displayWait ms, alternate between the next message and the time
+        // if it's time for the time, call unix2datetime. Else, load in a string.
+
+        if (showIndex == 0){ // Use time that has passed since time update
+            if (locTime > 0){ 
+                if (showDate){
+                    unix2date(locTime + (millis()-lastDatetimeUpdate)/1000);
+                } else {
+                    unix2time(locTime + (millis()-lastDatetimeUpdate)/1000);
+                }
+                showDate = !showDate;
+            }
+        } else{
+            infoAddMsg(msgs[curMsgIndex]);
+
+            curMsgIndex += 1;
+            curMsgIndex %= numMsgs;
+        }
+        showIndex = (showIndex+1) % showMax;
+
+        lastDisplayUpdate = millis();
+        written = false;
+    }
+
+
+    // Relay message over Infrared to the spinning arm.
+    if (!written){
+        // store current msg as bool
+//        msgLen = msg2bool((bool*)&sig, infoglobeMsg, 24); 
+//        if (random(2) == 0){
+//            msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);     
+//        } else{
+//            msgLen = msg2bool((bool*)&sig, infoglobeMsg, 50); // static display
+//            sendSig();
+//        }
+        msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
+        
+//        yield();
+        sendSig();
+
+        
+
+        written = true;
+        Serial.println("Written");
+
+    }
+
+} 
+
+
+void sendSig(){
+    // Send it
+    
+        Serial.println("Sending Sig");
+        Serial.println(msgLen);
+        for (int i = 0; i < msgLen; i++){
+            if (sig[i] == 0){ // Send 1 ms of signal
+                irsend.sendRaw(IRSIGS[curSig], sizeof(IRSIGS[curSig])/sizeof(IRSIGS[curSig][0]), 38);
+            } else{
+                delayMicroseconds(oneTime);
+            }
+        }
+        Serial.println("Done Sending Sig");
+    
+}
+
+///////////////////////// Makes an API call to worldtimeapi and gets the timezone localized unixtime
+///////////////////////// This can then be converting using the TimeLib Library
+//const char* ssid = "Logos7";
+//const char* password = "Godslove7";
+
+const char* ssid = "Cracked Guy";
+const char* password = "internet";
+
+long getLocalTime(){
+    if (WiFi.status() == WL_CONNECTED) {
+        HTTPClient http; //Object of class HTTPClient
+        WiFiClient client;
+
+        http.begin(client, "http://worldtimeapi.org/api/ip");
+        int httpCode = http.GET();
+        long unixTime, tmp;
+        if (httpCode > 0)  {
+            const size_t bufferSize = JSON_OBJECT_SIZE(30);
+            DynamicJsonDocument jsonBuffer(bufferSize);
+            deserializeJson(jsonBuffer, http.getString());
+            Serial.println(http.getString());
+
+            
+            unixTime = jsonBuffer["unixtime"]; 
+            tmp = jsonBuffer["raw_offset"]; // Account for timezone
+            unixTime += tmp;
+            tmp = jsonBuffer["dst_offset"]; // Account for daylight savings
+            unixTime += tmp; 
+        }
+        http.end(); //Close connection, we've got the data
+
+        // Also try to get infoglobe online messages
+        HTTPClient http2; //Object of class HTTPClient
+        WiFiClient client2;
+        http2.begin(client2, "http://aksuper7.pythonanywhere.com/static/messages.json");
+         httpCode = http2.GET();
+        if (httpCode > 0)  {
+            const size_t bufferSize = JSON_OBJECT_SIZE(30);
+            DynamicJsonDocument jsonBuffer(bufferSize);
+            deserializeJson(jsonBuffer, http2.getString());
+            Serial.println(http2.getString());
+
+            for (int i = 0; i < numMsgs; i++){
+                msgs[i] = (String)jsonBuffer[String("msg") + i];
+                Serial.println(msgs[i]);
+//                {"msg0": "and so what", "msg1": "what of it", "msg2": "whoare you"}
+            }
+
+            
+//            unixTime = jsonBuffer["unixtime"]; 
+//            tmp = jsonBuffer["raw_offset"]; // Account for timezone
+//            unixTime += tmp;
+//            tmp = jsonBuffer["dst_offset"]; // Account for daylight savings
+//            unixTime += tmp; 
+        }
+        http2.end(); //Close connection, we've got the data
+
+        
+        return unixTime;
+        
+    } else { // Connect to WiFi
+        WiFi.begin(ssid, password);
+        long beginTime = millis();
+        
+        while (WiFi.status() != WL_CONNECTED) {
+            if ((millis()-beginTime) > 10000){ // Exit if connection takes too long >10s
+                Serial.println("No WiFi Found :(");
+                infoAddMsg("No WiFi found :(");
+//                msgLen = msgadadadad2bool((bool*)&sig, "No WiFi found :(", 40); 
+                return -1;
+            }
+            delay(1000);
+            Serial.println("Connecting...");
+        }
+        Serial.println("Connected!");
+        return getLocalTime();
+    }
+}
+
+
+// Add arbitrary message to infoglobeMsg
+void infoAddMsg(String customMsg){
+    snprintf(infoglobeMsg, 38, customMsg.c_str());
+}
+
+void unix2date(long unixTime){
+//    Serial.println("date triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
+    snprintf(infoglobeMsg, 38, "%s %02d, %4d", monthStr(month(unixTime)), day(unixTime), year(unixTime));
+}
+
+void unix2time(long unixTime){
+//    Serial.println("time triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
+    snprintf(infoglobeMsg, 38, "%02d:%02d %s", hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
+//    snprintf(infoglobeMsg, 38, "%02d:%02d", hour(unixTime), minute(unixTime));
+}
+
+void unix2datetime(long unixTime){
+//    Serial.println("datetime triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
+    snprintf(infoglobeMsg, 38, "%s %02d, %4d   %02d:%02d %s", monthShortStr(month(unixTime) ), day(unixTime), year(unixTime), hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
+//    snprintf(infoglobeMsg, 38, "%s %02d, %4d   %02d:%02d", monthShortStr(month(unixTime)), day(unixTime), year(unixTime), hour(unixTime), minute(unixTime));
+}
+
+// 0,2,3,4, 
+
+// same as 1, CCW
+// 1 msg flies in CW, erases old
+
+// 2 message flies in like a pincer, 2 sided
+
+// 3 each pixel fades and then fades back in
+
+// 4 same as 5 but CW
+// 5 new fills in by erasing stationary old CCW
+// 7 old leaves in CCW, new forms stationary underneath
+// 8 grow down by row, grow up
+
+// 9 shrink to center, then expand from center
+// 10 interesting fill in, alternating from the top. 
+// 11 phase out each letter from the center, phase in from outside.
+
+// 12 replace all letters in circle, CCW
+// 13 same as 12, CW
+
+// 14 replaced in circle, every other letter, CCW
+
+// 16 old down, new up
+// 17 old up, new donw
+// 18 Everyone replaced at once by dropping, new letters come from above
+// 19 everyone replaced at once by flying up, new from below
+
+// 21 Erases in loop, then places back
+
+// 24 comes from bottom and mirrors
+// 25 comes from top and mirrors
+
+
+// 26 drop and replace, from L to R
+// 28 drop and replace, random
+// 30 pluck and replace, in order left to right
+// 33 pluck and replace, random
+// 34 each letter fade out from right
+// 35-37 all variations on 34
+
+
+//chosen effects = {0,2,  3,4,7,8,  9,10,11,  12,  16,17,18,19,  21, 24, 25, 26,28,  30,33, 34}
+
+
+/*  
+ *   Inputs:
+ *      buf: pointer to bool array that msg gets written into
+ *      msg: message to display 
+ *      effect: 0-37 inclusive, dictates the transition. 
+ *           Also includes static display (38), flashing display (39), and others etc.
+ *      
+ *  Returns:
+ *      Length of message + effect in bools.
+*/  
+int msg2bool(bool* buf, String msg, int effect){
+    byte effectBytes = byte(effect);
+    int len = msg.length();
+//    int firstMsgByte; // = (effect <= 37 && effect >= 0) ? 2 : 1;
+    int numBits = 0;
+
+    bool transitionOn = (effect <= 37 && effect >= 0);
+
+    /////////////// Header
+    // first 2 bytes are zero if transitions are on, otherwise depends (0x04 for now)
+    if (transitionOn){ // first 16 bits are all 0
+        for (int i = 0; i<16; i++){ 
+            buf[numBits] = 0;
+            numBits += 1;
+        }
+    } else if (effect == -6){  // Toggles scrolling
+        for (int i = 0; i<8; i++){ 
+            buf[numBits] = bitRead(6, 7-i);
+            numBits += 1;
+        }
+        return numBits;
+    } else { // first 8 bits are from 0x04
+        for (int i = 0; i<8; i++){ 
+            buf[numBits] = bitRead(5, 7-i);
+            numBits += 1;
+        }
+    }
+
+
+        
+    ////////////////// Add msg
+    byte curChar;
+    for (int i = 0; i < len; i++){ // i=firstMsgBit to skip the header's bytes
+        curChar = byte(msg[i]);
+        for (int j = 0; j < 8; j++){
+            buf[numBits] = bitRead(curChar, 7-j);
+            numBits += 1;
+        }
+    }
+
+
+    /////////// Add transition number to end if valid
+    if (transitionOn){
+        for (int j = 0; j < 8; j++){
+            buf[numBits] = bitRead(effectBytes, 7-j);
+            numBits += 1;
+        }
+    } 
+
+    
+//    // For flashing a scrolling message (02h)
+//    if (effect > 50){
+//        for (int i = 0; i<8; i++){ 
+//            buf[numBits] = bitRead(2, 7-i);
+//            numBits += 1;
+//        }
+//    }
+//
+//    // for 02h
+//    if (effect > 50){
+//        for (int i = 0; i<8; i++){ 
+//            buf[numBits] = bitRead(4, 7-i);
+//            numBits += 1;
+//        }
+//    }
+
+    
+    
+//    else{ // for flashing 05h
+//        for (int j = 0; j < 8; j++){
+//            buf[numBits] = bitRead(0, 7-j);
+//            numBits += 1;
+//        }
+//        for (int j = 0; j < 8; j++){
+//            buf[numBits] = bitRead(2, 7-j);
+//            numBits += 1;
+//        }
+//        for (int j = 0; j < 8; j++){
+//            buf[numBits] = bitRead(msg.length(), 7-j);
+//            numBits += 1;
+//        }
+//    }
+    
+    return numBits;
+}

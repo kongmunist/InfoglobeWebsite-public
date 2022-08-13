@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 # from flask_flatpages import FlatPages
 # from flask_frozen import Freezer
 import os, sys
@@ -15,8 +15,8 @@ MAX_LENGTH = 38
 def main():
     return render_template("main.html")
 
-@app.route('/', methods = ['POST', 'GET'])
-def index():
+@app.route('/savemessage', methods = ['POST'])
+def save_msg():
     data = []
     if request.method == 'POST':
         try:
@@ -26,7 +26,7 @@ def index():
             pass
 
         with open('messages.txt', 'w') as f:
-            msg = request.form["msg"]
+            msg = request.get_json()
             msg = msg[:MAX_LENGTH] if len(msg) > MAX_LENGTH else msg
             data.insert(0, msg)
 
@@ -39,8 +39,11 @@ def index():
                 d["msg" + str(i)] = msg;
             f.write(json.dumps(d))
 
+    return jsonify(data)
 
-
+@app.route('/', methods = ['GET'])
+def index():
+    data = []
     if (request.method == "GET"):
         try:
             with open('messages.txt', 'r') as f:

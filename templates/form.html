@@ -1,21 +1,24 @@
 {% extends "base.html" %}
 
 {% block headextra %}
+<script src="{{url_for('static', filename='submitMsg.js')}}"></script>
 {% endblock %}
 
 
 {% block body %}
 
     <div class="container">
-        <form class="" id="msg_form" action="" method="post">
+        <form class="" id="msg_form">
           <p><input type="text" name="msg" placeholder="Your Infoglobe Message" maxlength="38" autocomplete="off"></p>
           <p><input type="submit" name="" value="submit"></p>
         </form>
         <ul>
           <h2>Recent Messages</h2>
+          <div id="recent_msg">
           {% for item in values %}
             <li>{{item}}</li>
           {% endfor %}
+          </div>
         </ul>
     </div>
 

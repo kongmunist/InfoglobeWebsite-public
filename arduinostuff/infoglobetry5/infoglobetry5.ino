@@ -179,9 +179,6 @@ void sendSig(){
 const char* ssid = "Logos7";
 const char* password = "Godslove7";
 
-//const char* ssid = "Cracked Guy";
-//const char* password = "internet";
-
 long getLocalTime(){
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http; //Object of class HTTPClient
@@ -232,8 +229,9 @@ long getLocalTime(){
         long beginTime = millis();
         
         while (WiFi.status() != WL_CONNECTED) {
-            if ((millis()-beginTime) > 10000){ // Exit if connection takes too long >10s
+            if ((millis()-beginTime) > 10000){ // Resort to launching AP if connection takes too long >10s
                 Serial.println("No WiFi Found :(");
+                infoAddMsg("WiFi AP: Infoglobe, pw:password");
 
                 int success = launchWiFiAP();
                 if (success == 0){

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, url_for, redirect
 # from flask_flatpages import FlatPages
 # from flask_frozen import Freezer
 import os, sys
@@ -67,7 +67,9 @@ def index():
 # Doesn't work, also don't need it
 @app.route('/json')
 def jsonFile():
-    return "<a href=%s>file</a>" % "url_for('static', filename='messages.json')"
+    return redirect(url_for('static', filename='messages.json'))
+    # return """{"msg0": "whoaffls", "msg1": "awopdk", "msg2": "what"}"""
+    # return "<a href=%s>file</a>" % "url_for('static', filename='messages.json')"
 
 
 @app.after_request

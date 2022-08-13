@@ -3,6 +3,8 @@
  *  Rounds of len 4, showing messages then date or time.
  */
 
+ #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
+
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
@@ -20,36 +22,21 @@
 #include <IRsend.h>
 
 
-//13.48 ms/13 sigs, .48ms overgo on 13 is a reduction to like 37 uS, or instead of 1000 we use 963
-// For this ESP, 18ms is actually 18.24ms, so the delay should be 986.8 ms.
- // SIKE, that did't work. 1000 works better
-
 #define numSignals 1
 
-//int gapTime = 987;
 int zeroTime = 988;
 int oneTime = 1000;
-uint16_t IRSIGS[numSignals][2] = {
-//    {987,0}
-//    {gapTime,0}
+uint16_t IRSIGS[numSignals][2] = { // Signal on means zero to the spinning arm. 
     {zeroTime,0}
-    
 };
 
 int curSig = 0;
 
-//  BOOYAH
+// BOOYAH - inital message
+// size 320 is biggest a message can be, I think. 2 byte header + 35 char + 1 byte transition = 38*8 bits = 304, and I left some room in case I'm wrong. 
 bool sig[320] = {0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,1,0,0,1,1,1,1,0,1,0,0,1,1,1,1,0,1,0,1,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1,0,1,1,0,0,1};
 bool sig2[320] = {0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,1,0,0,1,1,1,1,0,1,0,0,1,1,1,1,0,1,0,1,1,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1,0,1,1,0,0,1};
 long msgLen = 96;
-//bool sig[0];
-
-
-// For a flashing display
-//The code 05h is used to flash a stationary display. The message starts with 05h, followed by the message text.
-// The next byte (00d to 34d) is the position of the beginning of the flashing portion of the display. The next byte
-// (00d to 35d) is the position of the end of the flashing portion of the display. The last byte (00d to 35d) 
-//is the message length, used for auto-centering.
 
 
 const uint16_t kIrLed = 4;  // ESP8266 GPIO pin to use. Recommended: 4 (D2).
@@ -65,7 +52,6 @@ bool written = false;
 
 char infoglobeMsg[38];
 long locTime;
-//bool showTime;
 int showIndex;
 int showMax;
 bool showDate;
@@ -81,7 +67,7 @@ String msgs[numMsgs] = {
 };
 
 int effects[] = {0,2,  3,4,7,8,  9,10,11,  12,  16,17,18,19,  21, 24, 25, 26,28,  30,33, 34};
-int numEffects = 21;
+int numEffects = sizeof(effects)/sizeof(effects[0]);
 
 
 void setup() {
@@ -98,18 +84,15 @@ void setup() {
     
     lastDatetimeUpdate = millis();
     lastDisplayUpdate = millis();
-//    showTime = false;
+
     showMax = 4;
     showIndex = 2;
     showDate = true;
-
-        
-    
 } 
 
 
 void loop() {
-    // Manually adding a new message
+    // Manually adding a new message through Serial
     if (Serial.available() > 0){
         // Read in new message
         String newSigS = Serial.readString();
@@ -122,12 +105,12 @@ void loop() {
 
 
 
-    //// Retrieve time and date every datetimeWait milliseconds
+    //// Retrieve unix timestamp and messages from aksuper7 every datetimeWait milliseconds
     if (millis()-lastDatetimeUpdate > datetimeWait){
         locTime = getLocalTime();
         if (locTime > 0){
             unix2time(locTime);
-        } 
+        }
         
         lastDatetimeUpdate = millis();
         lastDisplayUpdate = millis();
@@ -160,14 +143,6 @@ void loop() {
 
     // Relay message over Infrared to the spinning arm.
     if (!written){
-        // store current msg as bool
-//        msgLen = msg2bool((bool*)&sig, infoglobeMsg, 24); 
-//        if (random(2) == 0){
-//            msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);     
-//        } else{
-//            msgLen = msg2bool((bool*)&sig, infoglobeMsg, 50); // static display
-//            sendSig();
-//        }
         msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
         
 //        yield();
@@ -201,11 +176,11 @@ void sendSig(){
 
 ///////////////////////// Makes an API call to worldtimeapi and gets the timezone localized unixtime
 ///////////////////////// This can then be converting using the TimeLib Library
-//const char* ssid = "Logos7";
-//const char* password = "Godslove7";
+const char* ssid = "Logos7";
+const char* password = "Godslove7";
 
-const char* ssid = "Cracked Guy";
-const char* password = "internet";
+//const char* ssid = "Cracked Guy";
+//const char* password = "internet";
 
 long getLocalTime(){
     if (WiFi.status() == WL_CONNECTED) {
@@ -246,13 +221,6 @@ long getLocalTime(){
                 Serial.println(msgs[i]);
 //                {"msg0": "and so what", "msg1": "what of it", "msg2": "whoare you"}
             }
-
-            
-//            unixTime = jsonBuffer["unixtime"]; 
-//            tmp = jsonBuffer["raw_offset"]; // Account for timezone
-//            unixTime += tmp;
-//            tmp = jsonBuffer["dst_offset"]; // Account for daylight savings
-//            unixTime += tmp; 
         }
         http2.end(); //Close connection, we've got the data
 
@@ -266,9 +234,16 @@ long getLocalTime(){
         while (WiFi.status() != WL_CONNECTED) {
             if ((millis()-beginTime) > 10000){ // Exit if connection takes too long >10s
                 Serial.println("No WiFi Found :(");
-                infoAddMsg("No WiFi found :(");
-//                msgLen = msgadadadad2bool((bool*)&sig, "No WiFi found :(", 40); 
-                return -1;
+
+                int success = launchWiFiAP();
+                if (success == 0){
+                    Serial.println("Access Point WiFi Found :)");
+                    continue;
+                } else{
+                    Serial.println("Access Point WiFi also not found :(");
+                    infoAddMsg("No WiFi found :(");
+                    return -1;
+                }
             }
             delay(1000);
             Serial.println("Connecting...");
@@ -276,6 +251,37 @@ long getLocalTime(){
         Serial.println("Connected!");
         return getLocalTime();
     }
+}
+
+
+int launchWiFiAP(){
+  //WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
+  WiFiManager wm;
+
+  // reset settings - wipe stored credentials for testing
+  // these are stored by the esp library
+//  wm.resetSettings();
+
+  // Automatically connect using saved credentials,
+  // if connection fails, it starts an access point with the specified name ( "AutoConnectAP"),
+  // if empty will auto generate SSID, if password is blank it will be anonymous AP (wm.autoConnect())
+  // then goes into a blocking loop awaiting configuration and will return success result
+
+  bool res;
+  // res = wm.autoConnect(); // auto generated AP name from chipid
+  // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
+  res = wm.autoConnect("Olympia Infoglobe Brain", "password"); // password protected ap
+
+  if (!res) {
+    Serial.println("Failed to connect");
+    return 1;
+//    ESP.restart();
+  }
+  else {
+    //if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+    return 0;
+  }
 }
 
 

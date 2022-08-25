@@ -47,7 +47,7 @@ long lastDatetimeUpdate = 0;
 long lastDisplayUpdate = 0;
 
 long datetimeWait = 60000;
-long displayWait = 31000;
+long displayWait = 10000;
 bool written = false;
 
 char infoglobeMsg[38];
@@ -89,11 +89,12 @@ void setup() {
     showIndex = 2;
     showDate = true;
 
-    digitalWrite(LED_BUILTIN, LOW);
 } 
 
 
 void loop() {
+        digitalWrite(LED_BUILTIN, LOW);
+
     // Manually adding a new message through Serial
     if (Serial.available() > 0){
         // Read in new message
@@ -142,7 +143,6 @@ void loop() {
         written = false;
     }
 
-
     // Relay message over Infrared to the spinning arm.
     if (!written){
         msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
@@ -150,8 +150,11 @@ void loop() {
         written = true;
         Serial.println("Written");
     }
+
+    
     Serial.println("Loop");
-    delay(1000);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(4000);
 } 
 
 
@@ -167,8 +170,7 @@ void sendSig(){
                 delayMicroseconds(oneTime);
             }
         }
-        Serial.println("Done Sending Sig");
-    
+        Serial.println("Done Sending Sig");   
 }
 
 ///////////////////////// Makes an API call to worldtimeapi and gets the timezone localized unixtime
@@ -199,12 +201,13 @@ long getLocalTime(){
         }
         http.end(); //Close connection, we've got the data
 
+
+
         // Also try to get infoglobe online messages
         HTTPClient http2; //Object of class HTTPClient
         WiFiClient client2;
         http2.begin(client2, "http://aksuper7.pythonanywhere.com/json");
-//        http2.begin(client2, "http://aksuper7.pythonanywhere.com/static/messages.json");
-         httpCode = http2.GET();
+        httpCode = http2.GET();
         if (httpCode > 0)  {
             const size_t bufferSize = JSON_OBJECT_SIZE(30);
             DynamicJsonDocument jsonBuffer(bufferSize);

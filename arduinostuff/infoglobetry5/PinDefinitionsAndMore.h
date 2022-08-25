@@ -44,6 +44,7 @@
 //#define IRMP_MEASURE_TIMING // For debugging purposes.
 //
 #if defined(ESP8266)
+//#define FEEDBACK_LED_IS_ACTIVE_HIGH // The LED on my board is active LOW
 #define FEEDBACK_LED_IS_ACTIVE_LOW // The LED on my board is active LOW
 #define IR_RECEIVE_PIN          14 // D5
 #define IR_RECEIVE_PIN_STRING   "D5"

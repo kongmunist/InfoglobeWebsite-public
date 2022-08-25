@@ -79,9 +79,10 @@ def jsonFile():
     # d['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open('static/messages.json', "r+") as f:
         d = json.loads(f.read())
-        d.update({"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+        d.update({"timestamp": datetime.now().timestamp()})
         f.seek(0)
-        f.write(json.dumps(d))
+        # f.write(json.dumps(d))
+        f.write("asd")
 
     # return redirect(url_for('static', filename='messages.json'))
     return send_from_directory("static", 'messages.json')

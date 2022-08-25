@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, url_for, redirect
+from flask import Flask, render_template, request, jsonify, url_for, redirect, send_from_directory
 # from flask_flatpages import FlatPages
 # from flask_frozen import Freezer
 import os, sys
@@ -15,6 +15,13 @@ MAX_LENGTH = 38
 @app.route('/main', methods = ['POST', 'GET'])
 def main():
     return render_template("main.html")
+
+# TODO:
+# no repeats
+# no empty
+# delete button per message
+# fun infoglobe visualizer that spins
+
 
 @app.route('/savemessage', methods = ['POST'])
 def save_msg():
@@ -65,7 +72,7 @@ def index():
     return render_template("form.html", values=data)
 
 
-# Doesn't work, also don't need it
+# We need it now, going to /json delivers the .json file
 @app.route('/json')
 def jsonFile():
     # d['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -75,7 +82,8 @@ def jsonFile():
         f.seek(0)
         f.write(json.dumps(d))
 
-    return redirect(url_for('static', filename='messages.json'))
+    # return redirect(url_for('static', filename='messages.json'))
+    return send_from_directory("static", 'messages.json')
 
 @app.after_request
 def add_header(response):

@@ -88,6 +88,8 @@ void setup() {
     showMax = 4;
     showIndex = 2;
     showDate = true;
+
+    digitalWrite(LED_BUILTIN, LOW);
 } 
 
 
@@ -144,17 +146,12 @@ void loop() {
     // Relay message over Infrared to the spinning arm.
     if (!written){
         msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
-        
-//        yield();
         sendSig();
-
-        
-
         written = true;
         Serial.println("Written");
-
     }
-
+    Serial.println("Loop");
+    delay(1000);
 } 
 
 
@@ -205,7 +202,8 @@ long getLocalTime(){
         // Also try to get infoglobe online messages
         HTTPClient http2; //Object of class HTTPClient
         WiFiClient client2;
-        http2.begin(client2, "http://aksuper7.pythonanywhere.com/static/messages.json");
+        http2.begin(client2, "http://aksuper7.pythonanywhere.com/json");
+//        http2.begin(client2, "http://aksuper7.pythonanywhere.com/static/messages.json");
          httpCode = http2.GET();
         if (httpCode > 0)  {
             const size_t bufferSize = JSON_OBJECT_SIZE(30);
@@ -250,6 +248,10 @@ long getLocalTime(){
         return getLocalTime();
     }
 }
+
+
+
+
 
 
 int launchWiFiAP(){

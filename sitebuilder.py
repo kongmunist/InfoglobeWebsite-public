@@ -29,7 +29,8 @@ def save_msg():
         with open('static/messages.txt', 'w') as f:
             msg = request.get_json()
             msg = msg[:MAX_LENGTH]
-            data.insert(0, msg)
+            if (msg not in data):
+                data.insert(0, msg)
 
             data = data[:3]
             f.write("\n".join(data))

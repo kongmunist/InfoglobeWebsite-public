@@ -42,29 +42,31 @@ long msgLen = 96;
 const uint16_t kIrLed = 4;  // ESP8266 GPIO pin to use. Recommended: 4 (D2).
 IRsend irsend(kIrLed);  // Set the GPIO to be used to sending the message.
 
+char infoglobeMsg[35];
+long locTime;
+//int showIndex;
+//int showMax;
+//bool showDate;
+
+const int numMsgs = 6;
+int curMsgIndex = 0;
+String msgs[numMsgs] = {
+    "8v)", // index 0 is for time
+    "Gamma",
+    ":D",
+    "Mom!", // index 3 is for date
+    "Yee",
+    ":3"
+};
 
 long lastDatetimeUpdate = 0;
 long lastDisplayUpdate = 0;
 
-long datetimeWait = 60000;
 long displayWait = 10000;
+long datetimeWait = displayWait*numMsgs - 100; // wait until all messages are updated to refresh
 bool written = false;
 
-char infoglobeMsg[38];
-long locTime;
-int showIndex;
-int showMax;
-bool showDate;
 
-const int numMsgs = 5;
-int curMsgIndex = 0;
-String msgs[numMsgs] = {
-    "8v)",
-    "Gamma",
-    ":D",
-    "Yee",
-    ":3"
-};
 
 int effects[] = {0,2,  3,4,7,8,  9,10,11,  12,  16,17,18,19,  21, 24, 25, 26,28,  30,33, 34};
 int numEffects = sizeof(effects)/sizeof(effects[0]);
@@ -85,15 +87,14 @@ void setup() {
     lastDatetimeUpdate = millis();
     lastDisplayUpdate = millis();
 
-    showMax = 4;
-    showIndex = 2;
-    showDate = true;
-
+//    showMax = 4;
+//    showIndex = 2;
+//    showDate = true;
 } 
 
 
 void loop() {
-        digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LED_BUILTIN, LOW); // ESP8266 Wemos D1 Mini LED is inverted -.-
 
     // Manually adding a new message through Serial
     if (Serial.available() > 0){
@@ -108,7 +109,7 @@ void loop() {
 
 
 
-    //// Retrieve unix timestamp and messages from aksuper7 every datetimeWait milliseconds
+    ////////////////// Retrieve unix timestamp and messages from aksuper7 site
     if (millis()-lastDatetimeUpdate > datetimeWait){
         locTime = getLocalTime();
         if (locTime > 0){
@@ -118,32 +119,24 @@ void loop() {
         lastDatetimeUpdate = millis();
         lastDisplayUpdate = millis();
         written = false;
+        curMsgIndex = 0;
     } else if (millis() - lastDisplayUpdate > displayWait){
-        // Every displayWait ms, alternate between the next message and the time
-        // if it's time for the time, call unix2datetime. Else, load in a string.
-
-        if (showIndex == 0){ // Use time that has passed since time update
-            if (locTime > 0){ 
-                if (showDate){
-                    unix2date(locTime + (millis()-lastDatetimeUpdate)/1000);
-                } else {
-                    unix2time(locTime + (millis()-lastDatetimeUpdate)/1000);
-                }
-                showDate = !showDate;
-            }
-        } else{
-            infoAddMsg(msgs[curMsgIndex]);
-
-            curMsgIndex += 1;
-            curMsgIndex %= numMsgs;
-        }
-        showIndex = (showIndex+1) % showMax;
-
+        ///////////////////////// Load next message, update time and date string
+//        unix2date(locTime + (millis()-lastDatetimeUpdate)/1000);
+//        unix2time(locTime + (millis()-lastDatetimeUpdate)/1000);
+        infoAddMsg(msgs[curMsgIndex]);
+        
+        curMsgIndex += 1;
+        curMsgIndex %= numMsgs;
+//        showIndex = (showIndex+1) % showMax;
+    
         lastDisplayUpdate = millis();
         written = false;
     }
 
-    // Relay message over Infrared to the spinning arm.
+
+
+    ///////////////// Relay message over Infrared to the spinning arm
     if (!written){
         msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
         sendSig();
@@ -160,7 +153,6 @@ void loop() {
 
 void sendSig(){
     // Send it
-    
         Serial.println("Sending Sig");
         Serial.println(msgLen);
         for (int i = 0; i < msgLen; i++){
@@ -183,7 +175,8 @@ long getLocalTime(){
         HTTPClient http; //Object of class HTTPClient
         WiFiClient client;
 
-        http.begin(client, "http://worldtimeapi.org/api/ip");
+//        http.begin(client, "http://worldtimeapi.org/api/ip");
+        http.begin(client, "http://aksuper7.pythonanywhere.com/json");
         int httpCode = http.GET();
         long unixTime, tmp;
         if (httpCode > 0)  {
@@ -192,39 +185,28 @@ long getLocalTime(){
             deserializeJson(jsonBuffer, http.getString());
             Serial.println(http.getString());
 
-            
-            unixTime = jsonBuffer["unixtime"]; 
-            tmp = jsonBuffer["raw_offset"]; // Account for timezone
-            unixTime += tmp;
-            tmp = jsonBuffer["dst_offset"]; // Account for daylight savings
-            unixTime += tmp; 
-        }
-        http.end(); //Close connection, we've got the data
+            unixTime = jsonBuffer["timestamp"]; 
 
-
-
-        // Also try to get infoglobe online messages
-        HTTPClient http2; //Object of class HTTPClient
-        WiFiClient client2;
-        http2.begin(client2, "http://aksuper7.pythonanywhere.com/json");
-        httpCode = http2.GET();
-        if (httpCode > 0)  {
-            const size_t bufferSize = JSON_OBJECT_SIZE(30);
-            DynamicJsonDocument jsonBuffer(bufferSize);
-            deserializeJson(jsonBuffer, http2.getString());
-            Serial.println(http2.getString());
-
-            for (int i = 0; i < numMsgs; i++){
-                msgs[i] = (String)jsonBuffer[String("msg") + i];
-                Serial.println(msgs[i]);
-//                {"msg0": "and so what", "msg1": "what of it", "msg2": "whoare you"}
+            // Parse the rest of the messages, minus 2 for the date and time
+            int msgInsertInd = 0;
+            for (int i = 0; i < (numMsgs-2); i++){
+                if (i == 0 || i == 3){
+                    msgInsertInd++;
+                }
+                String tmpStr = (String)jsonBuffer[String("msg") + i];
+                if (tmpStr == "") { // placeholder if there's not enough messages
+                    msgs[msgInsertInd] = "Howdy!";
+                    Serial.println("placeholder'd");
+                } else{
+                    msgs[msgInsertInd] = tmpStr;
+                    Serial.println(msgs[msgInsertInd]);
+                    // {"msg0": "and so what", "msg1": "what of it", "msg2": "whoare you"}
+                }
+                msgInsertInd++; // update index for next message
             }
         }
-        http2.end(); //Close connection, we've got the data
-
-        
+        http.end(); //Close connection, we've got the data
         return unixTime;
-        
     } else { // Connect to WiFi
         WiFi.begin(ssid, password);
         long beginTime = millis();
@@ -290,24 +272,27 @@ int launchWiFiAP(){
 
 // Add arbitrary message to infoglobeMsg
 void infoAddMsg(String customMsg){
-    snprintf(infoglobeMsg, 38, customMsg.c_str());
+    snprintf(infoglobeMsg, 35, customMsg.c_str());
 }
 
+
+
+char strBuffer[35];
+
+// unix2date(locTime + (millis()-lastDatetimeUpdate)/1000);
 void unix2date(long unixTime){
-//    Serial.println("date triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
-    snprintf(infoglobeMsg, 38, "%s %02d, %4d", monthStr(month(unixTime)), day(unixTime), year(unixTime));
+    snprintf(strBuffer, 35, "%s %02d, %4d", monthStr(month(unixTime)), day(unixTime), year(unixTime));
+    msgs[3] = String(strBuffer);
 }
 
+// unix2time(locTime + (millis()-lastDatetimeUpdate)/1000);
 void unix2time(long unixTime){
-//    Serial.println("time triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
-    snprintf(infoglobeMsg, 38, "%02d:%02d %s", hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
-//    snprintf(infoglobeMsg, 38, "%02d:%02d", hour(unixTime), minute(unixTime));
+    snprintf(strBuffer, 35, "%02d:%02d %s", hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
+    msgs[0] = String(strBuffer);
 }
 
 void unix2datetime(long unixTime){
-//    Serial.println("datetime triggered AODJAOWIJWOIADJAJWDJAOWDJAWOJD");
-    snprintf(infoglobeMsg, 38, "%s %02d, %4d   %02d:%02d %s", monthShortStr(month(unixTime) ), day(unixTime), year(unixTime), hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
-//    snprintf(infoglobeMsg, 38, "%s %02d, %4d   %02d:%02d", monthShortStr(month(unixTime)), day(unixTime), year(unixTime), hour(unixTime), minute(unixTime));
+    snprintf(infoglobeMsg, 35, "%s %02d, %4d   %02d:%02d %s", monthShortStr(month(unixTime) ), day(unixTime), year(unixTime), hour(unixTime) % 12, minute(unixTime), (hour(unixTime) > 12) ? "pm" : "am" );
 }
 
 // 0,2,3,4, 

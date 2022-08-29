@@ -70,7 +70,7 @@ def index():
     return render_template("form.html", values=data)
 
 
-# We need it now, going to /json delivers the .json file
+# /json delivers the .json file to the globe (or malicious actor) after updating the time
 @app.route('/json')
 def jsonFile():
     # Update the timestamp to the current time
@@ -85,6 +85,9 @@ def jsonFile():
     with open('static/lastLogged.txt', "w+") as f:
         f.write(str(int(datetime.now().timestamp())))
     return send_from_directory("static", 'messages.json')
+
+# datetime sets the time offset string to Andy's browser. This adjusts the time set in /json
+
 
 @app.after_request
 def add_header(response):

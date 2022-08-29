@@ -89,7 +89,7 @@ def jsonFile():
     return send_from_directory("static", 'messages.json')
 
 # datetime sets the time offset string to Andy's browser. This adjusts the time set in /json
-@app.route('/settime')
+@app.route('/time')
 def setTime():
     minuteOffset = request.args.get('offset')
     if minuteOffset:

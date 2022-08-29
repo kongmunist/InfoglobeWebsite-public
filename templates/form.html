@@ -11,11 +11,14 @@
 
 {% block body %}
 
-    <div class="container">
+    <div class="container" style="">
         <form class="" id="msg_form">
           <p><input type="text" name="msg" placeholder="Your Infoglobe Message" maxlength="35" autocomplete="off" required></p>
           <p><input type="submit" name="" value="submit"></p>
         </form>
+
+          <div class="break"></div> <!-- break -->
+
 
         <ul>
           <h2>Recent Messages</h2>
@@ -25,8 +28,13 @@
           {% endfor %}
           </div>
         </ul>
+
+          <div class="break"></div> <!-- break -->
+
+
+        <div id="lastAccessed"></div>
+
     </div>
 
-<div id="lastAccessed"></div>
 
 {% endblock %}

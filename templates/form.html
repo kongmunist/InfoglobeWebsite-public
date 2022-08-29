@@ -31,8 +31,22 @@
 
           <div class="break"></div> <!-- break -->
 
-
         <div id="lastAccessed"></div>
+
+            <div class="break"></div> <!-- break -->
+    </div>
+
+<hr>
+
+    <div class="container">
+        <h1 class="cool-gradient-text" style="padding-bottom:5px;margin-bottom:0px;">See what the people are saying...</h1>
+        <div class="break"></div> <!-- break -->
+        <div class="gradient-text">
+            {% for item in history %}
+                {{item}}
+                <br>
+            {% endfor %}
+        </div>
 
     </div>
 

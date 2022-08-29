@@ -63,11 +63,23 @@ def index():
     data = []
     if (request.method == "GET"):
         try:
+            # Load in the last three messages
             with open('static/messages.txt', 'r') as f:
                 data = f.read().strip().split('\n')
-        except:
-            pass
-    return render_template("form.html", values=data)
+
+            # Load in the last 20 from history
+            with open("static/log.txt", "r") as f:
+                rawHist = f.read().strip().split('\n')
+            rawHist = [x[20:] for x in rawHist]
+            seen = set()
+            history = [x for x in rawHist if len(seen) < len(seen.add(x) or seen)]
+            # print(history)
+        except Exception as e:
+            print(e)
+    # return render_template("form.html", values=data, history = [chr(x) for x in range(65,91)])
+    return render_template("form.html", values=data, history = history)
+
+
 
 
 # /json delivers the .json file to the globe (or malicious actor) after updating the time

@@ -73,6 +73,7 @@ def index():
             rawHist = [x[20:] for x in rawHist]
             seen = set()
             history = [x for x in rawHist if len(seen) < len(seen.add(x) or seen)]
+            history = history[::-1][:20]
             # print(history)
         except Exception as e:
             print(e)

@@ -9,7 +9,8 @@ app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # app.config['DEBUG'] = True
 MSG_LIMIT = 3
-MAX_LENGTH = 38
+HISTORY_LIMIT = 20
+MAX_LENGTH = 35
 # freezer = Freezer(app)
 
 
@@ -73,7 +74,7 @@ def index():
             rawHist = [x[20:] for x in rawHist]
             seen = set()
             history = [x for x in rawHist if len(seen) < len(seen.add(x) or seen)]
-            history = history[::-1][:20]
+            history = history[::-1][MSG_LIMIT:MSG_LIMIT+HISTORY_LIMIT]
             # print(history)
         except Exception as e:
             print(e)

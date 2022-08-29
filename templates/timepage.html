@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block headextra %}
+
+<script>
+    function addSign(xNum){
+        return new Intl.NumberFormat("en-US", {
+            signDisplay: "exceptZero"
+       }).format(xNum);
+    }
+
+    document.addEventListener("DOMContentLoaded", function(event) {
+        var display = document.getElementById("timeoffset");
+        display.style.padding = "10px";
+
+        var localTimeOffset = new Date().getTimezoneOffset();
+        fetch(document.URL + "?offset=" + localTimeOffset)
+          .then((response) => {
+            return response.json();
+          })
+          .then((myJson) => {
+            display.innerHTML = "Globe time set to GMT" + addSign(myJson.minuteOffset/60)
+                           + " hours<br>"
+            display.innerHTML += "your offset is GMT" + addSign(localTimeOffset/60) +
+                    " hours<br>Your timezone is " + Intl.DateTimeFormat().resolvedOptions().timeZone
+
+            if (myJson.minuteOffset != localTimeOffset){
+                display.style.backgroundColor = "salmon";
+            } else{
+                display.style.backgroundColor = "lightgreen";
+            }
+      });
+    })
+</script>
+
+{% endblock %}
+
+
+{% block body %}
+
+<div id="timeoffset">Waiting for server response</div>
+
+{% endblock %}

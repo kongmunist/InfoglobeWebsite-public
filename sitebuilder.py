@@ -76,7 +76,9 @@ def jsonFile():
     # Update the timestamp to the current time
     with open('static/messages.json', "r+") as f:
         d = json.loads(f.read())
-        d.update({"timestamp": int(datetime.now().timestamp())})
+        curTime = datetime.now().timestamp()
+        curTime = int(curTime) + readTimeoffset()
+        d.update({"timestamp": curTime})
         f.truncate(0) # both needed
         f.seek(0)
         f.write(json.dumps(d))
@@ -87,7 +89,23 @@ def jsonFile():
     return send_from_directory("static", 'messages.json')
 
 # datetime sets the time offset string to Andy's browser. This adjusts the time set in /json
+@app.route('/settime')
+def setTime():
+    minuteOffset = request.args.get('offset')
+    if minuteOffset:
+        with open('static/timeOffset.txt', "w+") as f:
+            f.write(minuteOffset*60)
+        return jsonify({"minuteOffset": minuteOffset})
 
+    return render_template("timepage.html")
+
+
+def readTimeoffset():
+    try:
+        with open('static/timeOffset.txt', "r") as f:
+            return int(f.read())
+    except:
+        return 0
 
 @app.after_request
 def add_header(response):

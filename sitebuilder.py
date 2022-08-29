@@ -12,9 +12,6 @@ MSG_LIMIT = 3
 MAX_LENGTH = 38
 # freezer = Freezer(app)
 
-@app.route('/main', methods = ['POST', 'GET'])
-def main():
-    return render_template("main.html")
 
 # TODO:
 # no repeats
@@ -76,16 +73,17 @@ def index():
 # We need it now, going to /json delivers the .json file
 @app.route('/json')
 def jsonFile():
-    # d['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Update the timestamp to the current time
     with open('static/messages.json', "r+") as f:
         d = json.loads(f.read())
         d.update({"timestamp": int(datetime.now().timestamp())})
         f.truncate(0) # both needed
         f.seek(0)
         f.write(json.dumps(d))
-        # f.write("asd")
 
-    # return redirect(url_for('static', filename='messages.json'))
+    # Update lastLogged.txt
+    with open('static/lastLogged.txt', "w+") as f:
+        f.write(str(int(datetime.now().timestamp())))
     return send_from_directory("static", 'messages.json')
 
 @app.after_request

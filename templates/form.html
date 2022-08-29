@@ -2,6 +2,10 @@
 
 {% block headextra %}
 <script src="{{url_for('static', filename='submitMsg.js')}}"></script>
+
+
+<script src="{{url_for('static', filename='showLastAccessed.js')}}"></script>
+
 {% endblock %}
 
 
@@ -12,6 +16,7 @@
           <p><input type="text" name="msg" placeholder="Your Infoglobe Message" maxlength="35" autocomplete="off" required></p>
           <p><input type="submit" name="" value="submit"></p>
         </form>
+
         <ul>
           <h2>Recent Messages</h2>
           <div id="recent_msg">
@@ -21,5 +26,7 @@
           </div>
         </ul>
     </div>
+
+<div id="lastAccessed"></div>
 
 {% endblock %}

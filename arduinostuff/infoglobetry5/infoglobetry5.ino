@@ -135,7 +135,6 @@ void loop() {
     }
 
 
-
     ///////////////// Relay message over Infrared to the spinning arm
     if (!written){
         msgLen = msg2bool((bool*)&sig, infoglobeMsg, effects[random(numEffects)]);
@@ -194,7 +193,7 @@ long getLocalTime(){
                     msgInsertInd++;
                 }
                 String tmpStr = (String)jsonBuffer[String("msg") + i];
-                if (tmpStr == "") { // placeholder if there's not enough messages
+                if (tmpStr == "" || tmpStr == NULL || tmpStr == "null") { // placeholder if there's not enough messages
                     msgs[msgInsertInd] = "Howdy!";
                     Serial.println("placeholder'd");
                 } else{

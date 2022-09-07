@@ -116,6 +116,9 @@ def setTime():
 
     return render_template("timepage.html")
 
+@app.route("/exp_table")
+def table():
+    return render_template("table.html")
 
 def readTimeoffset():
     try:

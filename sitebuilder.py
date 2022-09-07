@@ -15,8 +15,8 @@ MAX_LENGTH = 35
 
 
 # TODO:
-# no repeats
-# no empty
+# no repeats X
+# no empty X
 # delete button per message
 # fun infoglobe visualizer that spins
 
@@ -116,16 +116,26 @@ def setTime():
 
     return render_template("timepage.html")
 
-@app.route("/exp_table")
-def table():
-    return render_template("table.html")
-
 def readTimeoffset():
     try:
         with open('static/timeOffset.txt', "r") as f:
             return int(f.read())
     except:
         return 0
+
+
+
+
+
+@app.route("/exp_table")
+def table():
+    return render_template("table.html")
+
+@app.route("/draggable_table")
+def grad_table():
+    return render_template("grad_table.html")
+
+
 
 @app.after_request
 def add_header(response):

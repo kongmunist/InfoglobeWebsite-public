@@ -55,6 +55,10 @@ document.addEventListener("keypress", function onEvent(event) {
         if (keyInt < 10){
             setColorIndicator(keyInt)
         }
+    } else{
+        if (event.key = "c"){
+            clearGrid();
+        }
     }
 });
 
@@ -97,7 +101,12 @@ function loadGrid(){
 
 
 
-
+function clearGrid(){
+    for (let i = 0; i < tablArray.length; i++){
+        tablArray[i].style.backgroundColor = null;
+    }
+    saveGrid();
+}
 
 function addElemsToRow(trow, numElems){
     let arr = [];

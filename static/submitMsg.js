@@ -8,9 +8,10 @@ function handleForm(event) {
   event.preventDefault();
   const form = document.getElementById("msg_form");
   const formData = new FormData(form)
-  const data = JSON.stringify(formData.get('msg'));
+  const msg = formData.get('msg')
+  const data = JSON.stringify(msg);
   const recents = document.getElementById("recent_msg")
-  recents.innerHTML = ""
+
   fetch('/savemessage', {
     headers: {
       'Content-Type': 'application/json'
@@ -18,13 +19,11 @@ function handleForm(event) {
     method: 'post',
     body: data,
   })
-  .then(response => response.json())
-  .then(json => json.forEach((item, i) => {
-      const li = document.createElement("li")
-      li.innerHTML = item
-      recents.appendChild(li)
-  }));
 
+  const li = document.createElement("li")
+  li.innerHTML = msg
+  recents.prepend(li)
+  recents.lastElementChild.remove()
   form.reset()
 }
 

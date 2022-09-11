@@ -13,7 +13,9 @@
 
     <div class="container" style="">
         <form class="" id="msg_form">
-          <p><input type="text" name="msg" placeholder="Your Infoglobe Message" maxlength="35" autocomplete="off" required></p>
+          <p><input type="text" name="msg" id="msg_field"
+            placeholder="Your Infoglobe Message"
+            maxlength="35" autocomplete="off" required autofocus></p>
           <p><input type="submit" name="" value="submit"></p>
         </form>
 
@@ -41,9 +43,9 @@
     <div class="container">
         <h1 class="cool-gradient-text" style="padding-bottom:5px;margin-bottom:0px;">See what the people are saying...</h1>
         <div class="break"></div> <!-- break -->
-        <div class="gradient-text">
+        <div id="full_history" class="gradient-text">
             {% for item in history %}
-                {{item}}
+                <span>{{item}}</span>
                 <br>
             {% endfor %}
         </div>

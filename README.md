@@ -1,5 +1,5 @@
 # 2/11/2025 Update: This repo for archival purposes and contains old code for my Infoglobe website
-Due to various security reasons I cannot publish the up-to-date repo, but for emotional reasons I needed to publish this project. The website may not run as-is, and the updated Arduino code can be found on my website. 
+Due to various security reasons I cannot publish the up-to-date repo, but for emotional reasons I needed to publish this project. The website may not run as-is, and the updated Arduino code can be found on my website.
 
 
 # Interactive Infoglobe Website
